@@ -1,0 +1,283 @@
+---
+title: "Stroke Dataset Programming Code"
+author: "Ha HeeJu, Sandy Seah Jin San, Tang Wei Feng, Yeo Shen Kai, Yeo Wei Jern"
+date: "2023-04-12"
+output: html_document
+---
+
+Preparation
+
+```{r load-libraries, echo=TRUE, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(reshape2)
+library(dlookr)
+library(caret)
+library(car)
+library(lmtest)
+library(readr)
+stroke_raw <- read_csv("healthcare-dataset-stroke-data.csv")
+```
+
+##Explanatory Data Analysis (EDA)
+
+Checking for repeated IDs
+```{r eda1, echo=TRUE}
+stroke_raw %>% 
+  group_by(id) %>% 
+  summarise(n=sum(n())) %>% 
+  filter(n>1) 
+```
+
+Checking factor levels of “gender”
+```{r eda2, echo=TRUE}
+stroke_raw %>% 
+  group_by(gender) %>%
+  summarise(n = n()) %>%
+  mutate(Percent = n / sum(n) * 100)
+```
+
+Checking factor levels of “work_type”
+```{r eda3, echo=TRUE}
+stroke_raw %>% 
+  group_by(work_type) %>%
+  summarise(n = n()) %>%
+  mutate(Percent = n / sum(n) * 100)
+```
+
+Checking number of 'N/A' in bmi 
+```{r eda4, echo=TRUE}
+stroke_raw %>% 
+  filter(bmi == "N/A") %>%
+  summarise(Count = n()) 
+```
+
+Checking factor levels of “smoking_status” 
+```{r eda5, echo=TRUE}
+stroke_raw %>% 
+  group_by(smoking_status) %>%
+  summarise(n = n()) %>%
+  mutate(Percent = n / sum(n) * 100)
+```
+
+Checking Skewness & Kurtosis of numerical variables
+```{r eda6, echo=TRUE}
+stroke_raw <- stroke_raw %>%
+  mutate(bmi = na_if(bmi, "N/A")) %>%
+  mutate(bmi = as.numeric(bmi))
+
+stroke_raw %>%
+  select(age, avg_glucose_level, bmi) %>%
+  describe()
+
+par(mfrow = c(1, 3))
+hist(stroke_raw$age, 
+     xlab = "Age", ylab = "Count", main = "Histogram of Age")
+hist(stroke_raw$avg_glucose_level, 
+     xlab = "Avg Glucose Level", ylab = "Count", main = "Histogram of Avg Glucose Level")
+hist(stroke_raw %>% filter(!is.na(bmi)) %>% pull(bmi),
+     xlab = "BMI", ylab = "Count", main = "Histogram of BMI")
+```
+
+
+Checking factor levels of “stroke” 
+```{r eda7, echo=TRUE}
+stroke_raw %>% 
+  group_by(stroke) %>%
+  summarise(n = n()) %>%
+  mutate(Percent = n / sum(n) * 100)
+```
+
+## Data Preprocessing and Feature Engineering 
+Data Preprocessing
+```{r dp1, echo=TRUE}
+stroke_df = stroke_raw %>%
+  drop_na() %>% 
+  select(-c(id)) %>%
+  filter(gender != "Other") %>% 
+  filter(work_type != "Never_worked") %>%
+  filter(bmi != 'N/A') %>% 
+  mutate_at("bmi", as.numeric) %>%
+  mutate_at(c("gender", "heart_disease", "hypertension", 
+              "ever_married", "work_type", "Residence_type",
+              "smoking_status", "stroke"), as.factor)
+```
+
+Feature Engineering
+```{r dp2, echo=TRUE}
+plot_normality(stroke_raw, avg_glucose_level) #average glucose level is close to normality at square root
+
+plot_normality(stroke_raw, bmi) #bmi is close to normality under log transformation
+
+stroke_df = stroke_df %>%
+  mutate(sqrt_glucose = sqrt(avg_glucose_level)) %>%
+  mutate(log_bmi = log10(bmi)) %>%
+  select(-c(avg_glucose_level, bmi))
+```
+
+## Code for Logistic Regression Assumption
+
+1. Binary Logistic Regression
+```{r assumption1, echo=TRUE}
+stroke_df %>%
+  group_by(stroke) %>%
+  summarise(n = n()) %>%
+  mutate(Percent = n / sum(n) * 100)
+```
+
+2. Independent observations
+
+The second assumption that observations should be independent of each other is shown in the EDA, where there are no duplicate IDs in the data set.
+
+3. No Multicollinearity
+```{r assumption3, echo=TRUE}
+dummy  = dummyVars(~gender+ever_married+work_type+
+                   Residence_type+smoking_status, stroke_df)
+stroke_corr = data.frame(predict(dummy, stroke_df))
+stroke_corr$age = stroke_df$age
+stroke_corr$sqrt_glucose = stroke_df$sqrt_glucose
+stroke_corr$log_bmi = stroke_df$log_bmi
+stroke_corr$hypertension = ifelse(stroke_df$hypertension == 0, 0, 1)
+stroke_corr$heart_disease = ifelse(stroke_df$heart_disease == 0, 0, 1)
+
+corrmat = cor(stroke_corr)
+get_upper_tri = function(corrmat){
+  corrmat[lower.tri(corrmat)] = NA
+  return(corrmat)
+}
+upper_tri = get_upper_tri(corrmat)
+melted_corrmat = melt(upper_tri, na.rm = TRUE)
+
+ggplot(data = melted_corrmat, aes(Var2, Var1, fill = value)) +
+  geom_tile()+
+  scale_fill_gradient2(low = "sky blue", high = "hot pink", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Correlation\nCoefficient") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1,
+                                   size = 10, hjust = 1)) +
+  geom_text(aes(Var2, Var1, label = round(value, 2)), color = "black", size = 3) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.major = element_blank()) +
+  coord_fixed()
+```
+
+4. Linearity of Independent Numerical variables and Log odds
+```{r assumption4, echo=TRUE}
+full_model = glm(stroke~., data=stroke_df, family = binomial)
+logodds = full_model$linear.predictors
+boxTidwell(logodds ~ age+sqrt_glucose+log_bmi, data=stroke_df)
+
+probabilities = predict(full_model, type = "response")
+predicted.classes = ifelse(probabilities > 0.5, 1, 0)
+
+linear_predictors = stroke_df %>%
+  select(age, sqrt_glucose, log_bmi)
+predictors = colnames(linear_predictors)
+
+linear_predictors = linear_predictors %>%
+  mutate(logodds = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logodds)
+
+ggplot(linear_predictors, aes(logodds, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess") + 
+  facet_wrap(~predictors, scales = "free_y") +
+  theme(axis.title.y = element_blank())
+```
+
+5. Large sample size
+```{r assumption5, echo=TRUE}
+dim(stroke_df)
+```
+
+## Hypothesis
+### Hypothesis 1 - BMI
+A higher BMI increases the risk of having a stroke
+```{r lm_1_setup, echo=TRUE}
+plot(y = stroke_df$stroke, x = stroke_df$log_bmi, pch = 20)
+cor(as.numeric(stroke_df$stroke), stroke_df$log_bmi) #0.04237366
+```
+
+### Linear Model
+Base model
+```{r lm_1_naive, echo=TRUE}
+bmi_fit <- glm(stroke ~ log_bmi, data = stroke_df, family = "binomial") 
+summary(bmi_fit)
+
+#R-squared value for logistic regression
+1 - logLik(bmi_fit) / logLik(glm(stroke ~ 1, family = "binomial", data = stroke_df)) #0.008193021 
+```
+
+Controlled model
+```{r lm_1_controlled, echo=TRUE}
+bmi_fit2 <- glm(stroke ~ log_bmi + gender + age, data = stroke_df, family = "binomial") 
+summary(bmi_fit2) #For every unit increase in log_bmi, odds of having a stroke increases by 1.01. p-value < 0.05 --> Correlation
+
+1 - logLik(bmi_fit2) / logLik(glm(stroke ~ 1, family = "binomial", data = stroke_df)) #0.008396168
+```
+
+
+### Hypothesis 2 – Residence 
+Whether there is a direct causal relationship between the region a person lives in (rural or urban) and if the person has a stroke
+
+```{r lm_2_setup, echo=TRUE}
+ggplot(stroke_df, aes(x = Residence_type, fill = stroke)) +
+  geom_bar(position = "dodge")
+
+p_rs_to_r <- nrow(stroke_df %>% filter(Residence_type == "Rural", stroke == 1)) / nrow(stroke_df %>% filter(Residence_type == "Rural"))
+p_us_to_u <- nrow(stroke_df %>% filter(Residence_type == "Urban", stroke == 1)) / nrow(stroke_df %>% filter(Residence_type == "Urban"))
+
+num_rural <- nrow(stroke_df %>% filter(Residence_type == "Rural"))
+num_urban <- nrow(stroke_df %>% filter(Residence_type == "Urban"))
+```
+
+### Linear Model
+Base model
+```{r lm_2_naive, echo=TRUE}
+restype_fit <- glm(stroke ~ Residence_type, data = stroke_df, family = "binomial") 
+summary(restype_fit)
+1 - logLik(restype_fit) / logLik(glm(stroke ~ 1, family = "binomial", data = stroke_df)) #0.0001, very low explainability
+```
+
+Controlled model
+```{r lm_2_controlled, echo=TRUE}
+restype_fit2 <- glm(stroke ~ Residence_type + 
+                  gender + 
+                  ever_married + 
+                  age, 
+                  data = stroke_df,
+                   family = "binomial") #Base model
+summary(restype_fit2)
+1 - logLik(restype_fit2) / logLik(glm(stroke ~ 1, family = "binomial", data = stroke_df)) #0.185, decent explainability 
+```
+
+### Hypothesis 3 – Glucose Level
+A higher glucose level increases the risk of having a stroke
+
+```{r lm_3_setup}
+plot(y = stroke_df$stroke, x = stroke_df$sqrt_glucose, pch = 20)
+```
+
+### Linear Model
+Base model
+```{r lm_3_naive}
+glucose_fit <- glm(stroke ~ sqrt_glucose, data = stroke_df, family = "binomial") 
+summary(glucose_fit) # coefficient of sqrt_glucose is 0.26021, thus for every 1 unit increase in the glucose level, the odds of having a stroke increases by 0.0677. (statistically significant, p value < 0.05)
+```
+
+```{r lm_3_naive1}
+#McFadden's pseudo R-squared for a logistic regression model
+1 - logLik(glucose_fit) / logLik(glm(stroke ~ 1, family = "binomial", data = stroke_df)) #0.04112801, changes in the glucose level “explains" 4.11% of the changes in stroke.
+```
+
+Controlled model
+```{r lm_3_controlled}
+glucose_fit2 <- glm(stroke ~ sqrt_glucose+smoking_status+gender+age, data = stroke_df, family = "binomial") 
+summary(glucose_fit2) #the odds of having a stroke increases by 0.0164019. (statistically significant, p value < 0.05)
+```
+
+```{r lm_3_naive12}
+#McFadden's pseudo R-squared for a logistic regression model
+1 - logLik(glucose_fit2) / logLik(glm(stroke ~ 1, family = "binomial", data = stroke_df)) #0.1996651, R-Squared improved from previous model, means that the changes in the glucose level “explains" 
+```
