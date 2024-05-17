@@ -1,4 +1,4 @@
-# "Early Detection and Prevention: Unraveling Stroke Risk Factors with R"
+# Early Detection and Prevention: Unraveling Stroke Risk Factors with R
 Predictive Analysis of Stroke Risk Factors using R 
 
 ## Introduction 🌟
