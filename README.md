@@ -1,7 +1,7 @@
-# Stroke Risk Factor Analysis
+# "Early Detection and Prevention: Unraveling Stroke Risk Factors with R"
 Predictive Analysis of Stroke Risk Factors using R 
 
-## Introduction
+## Introduction 🌟
 This repository contains analysis on risk factors for Stroke patients using data from Kaggle.
 > Programming Language: R \
 > Tools: Tidyverse (ggplot, dplyr)
@@ -11,7 +11,7 @@ The repository has the following series of contents:
 - R markdown code
 - Final Report
 
-## Problem Statement
+## Problem Statement ❓
 Research has shown that if stroke is detected or diagnosed early, death and severe damage to the brain can be prevented in 85% of cases. Therefore, our group was motivated to utilise a dataset that collected different features from patients to predict which parameters may increase the risk of getting a stroke. 
 
 The causal relationship found can be useful in suggesting solutions to decrease the likelihood of suffering from a stroke. Our group used a logistic regression model to investigate the possible causality between getting a stroke with 3 factors: Body Mass Index (BMI), residence type (urban or rural), and average glucose level.
@@ -19,7 +19,7 @@ The causal relationship found can be useful in suggesting solutions to decrease 
 ### Benefits from Solution:
 With the predictive risk factors, government looking to reducing stroke incidence can implement impactful policies that increases the citizen's health and reducing the stroke incidence. 
 
-## Data Description
+## Data Description 📶
 12 attributes of a patient have been provided in the dataset:
 - id: unique identifier of the patient
 - gender: “Male”, “Female” or “Other”
