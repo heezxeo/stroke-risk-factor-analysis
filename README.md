@@ -3,7 +3,7 @@ Predictive Analysis of Stroke Risk Factors using R
 
 ## Introduction
 This repository contains analysis on risk factors for Stroke patients using data from Kaggle.
-> Programming Language: R /
+> Programming Language: R 
 > Tools: Tidyverse (ggplot, dplyr)
 
 The repository has the following series of contents:
