@@ -7,7 +7,8 @@ This repository contains analysis on risk factors for Stroke patients using data
 
 The repository has the following series of contents:
 - Data (raw)
-- Report: R markdown code, Final Report (ppt)
+- notebooks:  R markdown code
+- Report: Final Report (ppt)
 
 ## Problem Statement ❓
 Research has shown that if stroke is detected or diagnosed early, death and severe damage to the brain can be prevented in 85% of cases. Therefore, our group was motivated to utilise a dataset that collected different features from patients to predict which parameters may increase the risk of getting a stroke. 
