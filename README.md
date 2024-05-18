@@ -1,5 +1,4 @@
-# Early Detection and Prevention: Unraveling Stroke Risk Factors with R
-Predictive Analysis of Stroke Risk Factors using R 
+# Predicting Stroke Risk Factors through Logistic Regression Modeling
 
 ## Introduction 🌟
 This repository contains analysis on risk factors for Stroke patients using data from Kaggle.
