@@ -6,9 +6,17 @@ This repository contains analysis on risk factors for Stroke patients using data
 > Tools: Tidyverse (ggplot, dplyr)
 
 The repository has the following series of contents:
-- Data (raw)
-- notebooks:  R markdown code
-- Report: Final Report (ppt)
+```
+├── README.md                     # Project Description
+├── data/
+│   ├── raw/                      # Original Data
+│
+├── notebooks/                    # R Code (R markdown)
+│
+├── reports/                      
+│   ├── Final PPT/                # Final PPT 
+│   └── Report pdf/               # Final PDF report
+```
 
 ## Problem Statement ❓
 Research has shown that if stroke is detected or diagnosed early, death and severe damage to the brain can be prevented in 85% of cases. Therefore, our group was motivated to utilise a dataset that collected different features from patients to predict which parameters may increase the risk of getting a stroke. 
